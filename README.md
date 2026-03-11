@@ -1,6 +1,6 @@
 # 🍃 react-native-ease
 
-Lightweight declarative animations powered by platform APIs. Uses Core Animation on iOS and Animator on Android — zero JS thread overhead.
+Lightweight declarative animations powered by platform APIs. Uses Core Animation on iOS and Animator on Android — zero JS overhead.
 
 ## Goals
 
@@ -15,7 +15,6 @@ Lightweight declarative animations powered by platform APIs. Uses Core Animation
 - **Layout animations** — Animating width/height/layout changes is not supported.
 - **Shared element transitions** — Use Reanimated or React Navigation's shared element transitions.
 - **Old architecture** — Fabric (new architecture) only.
-- **Fine-grained control** — No per-property transition config, no completion callbacks, no animation chaining. If you need that level of control, Reanimated is the right tool.
 
 ## When to use this vs Reanimated
 
@@ -33,12 +32,6 @@ Lightweight declarative animations powered by platform APIs. Uses Core Animation
 npm install react-native-ease
 # or
 yarn add react-native-ease
-```
-
-On iOS, run pod install:
-
-```bash
-cd ios && pod install
 ```
 
 ## Quick Start
