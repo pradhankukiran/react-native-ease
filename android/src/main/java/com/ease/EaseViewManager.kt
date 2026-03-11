@@ -100,6 +100,11 @@ class EaseViewManager : ReactViewManager() {
         view.transitionMass = value
     }
 
+    @ReactProp(name = "transitionLoop")
+    fun setTransitionLoop(view: EaseView, value: String?) {
+        view.transitionLoop = value ?: "none"
+    }
+
     // --- Hardware layer ---
 
     @ReactProp(name = "useHardwareLayer", defaultBoolean = true)

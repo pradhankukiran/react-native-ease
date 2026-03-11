@@ -33,6 +33,7 @@ class EaseView(context: Context) : ReactViewGroup(context) {
     var transitionDamping: Float = 15.0f
     var transitionStiffness: Float = 120.0f
     var transitionMass: Float = 1.0f
+    var transitionLoop: String = "none"
 
     // --- Hardware layer ---
     var useHardwareLayer: Boolean = true
@@ -116,33 +117,33 @@ class EaseView(context: Context) : ReactViewGroup(context) {
                 this.rotation = initialAnimateRotate
 
                 if (initialAnimateOpacity != opacity) {
-                    animateProperty("alpha", DynamicAnimation.ALPHA, initialAnimateOpacity, opacity)
+                    animateProperty("alpha", DynamicAnimation.ALPHA, initialAnimateOpacity, opacity, loop = true)
                 } else {
                     this.alpha = opacity
                 }
 
                 if (initialAnimateTranslateX != translateX) {
-                    animateProperty("translationX", DynamicAnimation.TRANSLATION_X, initialAnimateTranslateX, translateX)
+                    animateProperty("translationX", DynamicAnimation.TRANSLATION_X, initialAnimateTranslateX, translateX, loop = true)
                 } else {
                     this.translationX = translateX
                 }
 
                 if (initialAnimateTranslateY != translateY) {
-                    animateProperty("translationY", DynamicAnimation.TRANSLATION_Y, initialAnimateTranslateY, translateY)
+                    animateProperty("translationY", DynamicAnimation.TRANSLATION_Y, initialAnimateTranslateY, translateY, loop = true)
                 } else {
                     this.translationY = translateY
                 }
 
                 if (initialAnimateScale != scale) {
-                    animateProperty("scaleX", DynamicAnimation.SCALE_X, initialAnimateScale, scale)
-                    animateProperty("scaleY", DynamicAnimation.SCALE_Y, initialAnimateScale, scale)
+                    animateProperty("scaleX", DynamicAnimation.SCALE_X, initialAnimateScale, scale, loop = true)
+                    animateProperty("scaleY", DynamicAnimation.SCALE_Y, initialAnimateScale, scale, loop = true)
                 } else {
                     this.scaleX = scale
                     this.scaleY = scale
                 }
 
                 if (initialAnimateRotate != rotate) {
-                    animateProperty("rotation", DynamicAnimation.ROTATION, initialAnimateRotate, rotate)
+                    animateProperty("rotation", DynamicAnimation.ROTATION, initialAnimateRotate, rotate, loop = true)
                 } else {
                     this.rotation = rotate
                 }
@@ -204,22 +205,31 @@ class EaseView(context: Context) : ReactViewGroup(context) {
         propertyName: String,
         viewProperty: DynamicAnimation.ViewProperty,
         fromValue: Float,
-        toValue: Float
+        toValue: Float,
+        loop: Boolean = false
     ) {
         if (transitionType == "spring") {
             animateSpring(viewProperty, toValue)
         } else {
-            animateTiming(propertyName, fromValue, toValue)
+            animateTiming(propertyName, fromValue, toValue, loop)
         }
     }
 
-    private fun animateTiming(propertyName: String, fromValue: Float, toValue: Float) {
+    private fun animateTiming(propertyName: String, fromValue: Float, toValue: Float, loop: Boolean = false) {
         cancelSpringForProperty(propertyName)
         runningAnimators[propertyName]?.cancel()
 
         val animator = ObjectAnimator.ofFloat(this, propertyName, fromValue, toValue).apply {
             duration = transitionDuration.toLong()
             interpolator = getInterpolator(transitionEasing)
+            if (loop && transitionLoop != "none") {
+                repeatCount = ObjectAnimator.INFINITE
+                repeatMode = if (transitionLoop == "reverse") {
+                    ObjectAnimator.REVERSE
+                } else {
+                    ObjectAnimator.RESTART
+                }
+            }
             addListener(object : AnimatorListenerAdapter() {
                 override fun onAnimationStart(animation: Animator) {
                     this@EaseView.onEaseAnimationStart()
@@ -324,5 +334,6 @@ class EaseView(context: Context) : ReactViewGroup(context) {
         prevRotate = null
 
         isFirstMount = true
+        transitionLoop = "none"
     }
 }
