@@ -10,6 +10,8 @@ import {
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { EaseView } from 'react-native-ease';
 
+import ComparisonScreen from './ComparisonScreen';
+
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 // 20px scrollContent padding + 20px section padding on each side
 const BANNER_WIDTH = SCREEN_WIDTH - 80;
@@ -70,10 +72,10 @@ function BannerDemo() {
           style={styles.bannerTrack}
         >
           <View style={styles.bannerSlide}>
-            <Text style={styles.bannerText}>🍃 react-native-ease</Text>
+            <Text style={styles.bannerText}>react-native-ease</Text>
           </View>
           <View style={styles.bannerSlide}>
-            <Text style={styles.bannerText}>🍃 react-native-ease</Text>
+            <Text style={styles.bannerText}>react-native-ease</Text>
           </View>
         </EaseView>
       </View>
@@ -168,23 +170,70 @@ function CombinedDemo() {
   );
 }
 
+type Screen = 'demos' | 'comparison';
+
+function TabBar({
+  screen,
+  onChangeScreen,
+}: {
+  screen: Screen;
+  onChangeScreen: (s: Screen) => void;
+}) {
+  return (
+    <View style={styles.tabBar}>
+      <Pressable
+        style={[styles.tab, screen === 'demos' && styles.tabActive]}
+        onPress={() => onChangeScreen('demos')}
+      >
+        <Text
+          style={[styles.tabText, screen === 'demos' && styles.tabTextActive]}
+        >
+          Demos
+        </Text>
+      </Pressable>
+      <Pressable
+        style={[styles.tab, screen === 'comparison' && styles.tabActive]}
+        onPress={() => onChangeScreen('comparison')}
+      >
+        <Text
+          style={[
+            styles.tabText,
+            screen === 'comparison' && styles.tabTextActive,
+          ]}
+        >
+          vs Reanimated
+        </Text>
+      </Pressable>
+    </View>
+  );
+}
+
+function DemosScreen() {
+  return (
+    <ScrollView contentContainerStyle={styles.scrollContent}>
+      <Text style={styles.title}>🍃 react-native-ease</Text>
+      <Text style={styles.subtitle}>
+        Native animations, zero JS overhead{'\n'}by App&Flow
+      </Text>
+      <ButtonDemo />
+      <BannerDemo />
+      <FadeDemo />
+      <SlideDemo />
+      <EnterDemo />
+      <RotateDemo />
+      <CombinedDemo />
+    </ScrollView>
+  );
+}
+
 export default function App() {
+  const [screen, setScreen] = useState<Screen>('demos');
+
   return (
     <SafeAreaProvider>
       <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          <Text style={styles.title}>🍃 react-native-ease</Text>
-          <Text style={styles.subtitle}>
-            Native animations, zero JS overhead{'\n'}by App&Flow
-          </Text>
-          <ButtonDemo />
-          <BannerDemo />
-          <FadeDemo />
-          <SlideDemo />
-          <EnterDemo />
-          <RotateDemo />
-          <CombinedDemo />
-        </ScrollView>
+        <TabBar screen={screen} onChangeScreen={setScreen} />
+        {screen === 'demos' ? <DemosScreen /> : <ComparisonScreen />}
       </SafeAreaView>
     </SafeAreaProvider>
   );
@@ -194,6 +243,30 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#1a1a2e',
+  },
+  tabBar: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: 12,
+    gap: 8,
+  },
+  tab: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: '#16213e',
+  },
+  tabActive: {
+    backgroundColor: '#4a90d9',
+  },
+  tabText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#8888aa',
+  },
+  tabTextActive: {
+    color: '#fff',
   },
   scrollContent: {
     padding: 20,
