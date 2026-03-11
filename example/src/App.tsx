@@ -11,7 +11,8 @@ import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { EaseView } from 'react-native-ease';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const BANNER_WIDTH = SCREEN_WIDTH - 40;
+// 20px scrollContent padding + 20px section padding on each side
+const BANNER_WIDTH = SCREEN_WIDTH - 80;
 
 function Section({
   title,
@@ -69,10 +70,10 @@ function BannerDemo() {
           style={styles.bannerTrack}
         >
           <View style={styles.bannerSlide}>
-            <Text style={styles.bannerText}>react-native-ease</Text>
+            <Text style={styles.bannerText}>🍃 react-native-ease</Text>
           </View>
           <View style={styles.bannerSlide}>
-            <Text style={styles.bannerText}>react-native-ease</Text>
+            <Text style={styles.bannerText}>🍃 react-native-ease</Text>
           </View>
         </EaseView>
       </View>
@@ -172,9 +173,9 @@ export default function App() {
     <SafeAreaProvider>
       <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
         <ScrollView contentContainerStyle={styles.scrollContent}>
-          <Text style={styles.title}>react-native-ease</Text>
+          <Text style={styles.title}>🍃 react-native-ease</Text>
           <Text style={styles.subtitle}>
-            Native animations, zero JS overhead
+            Native animations, zero JS overhead{'\n'}by App&Flow
           </Text>
           <ButtonDemo />
           <BannerDemo />
