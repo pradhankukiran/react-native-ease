@@ -71,6 +71,7 @@ Timing animations transition from one value to another over a fixed duration wit
 |---|---|---|---|
 | `duration` | `number` | `300` | Duration in milliseconds |
 | `easing` | `string` | `'easeInOut'` | Easing curve |
+| `loop` | `string` | — | `'repeat'` restarts from the beginning, `'reverse'` alternates direction |
 
 Available easing curves:
 
@@ -130,6 +131,28 @@ All properties are set in the `animate` prop as flat values (no transform array)
 
 You can animate any combination of properties simultaneously. All properties share the same transition config.
 
+### Looping Animations
+
+Timing animations can loop infinitely. Use `'repeat'` to restart from the beginning or `'reverse'` to alternate direction.
+
+```tsx
+// Pulsing opacity
+<EaseView
+  initialAnimate={{ opacity: 0.3 }}
+  animate={{ opacity: 1 }}
+  transition={{ type: 'timing', duration: 1000, easing: 'easeInOut', loop: 'reverse' }}
+/>
+
+// Marquee-style scroll
+<EaseView
+  initialAnimate={{ translateX: 0 }}
+  animate={{ translateX: -300 }}
+  transition={{ type: 'timing', duration: 3000, easing: 'linear', loop: 'repeat' }}
+/>
+```
+
+Loop requires `initialAnimate` to define the starting value. Spring animations do not support looping.
+
 ### Enter Animations
 
 Use `initialAnimate` to set starting values. On mount, the view starts at `initialAnimate` values and animates to `animate` values.
@@ -187,6 +210,8 @@ A `View` that animates property changes using native platform APIs.
 | `animate` | `AnimateProps` | Target values for animated properties |
 | `initialAnimate` | `AnimateProps` | Starting values for enter animations (animates to `animate` on mount) |
 | `transition` | `Transition` | Animation configuration (timing or spring) |
+| `onTransitionEnd` | `(event) => void` | Called when an animation finishes with `{ finished: boolean }` |
+| `useHardwareLayer` | `boolean` | Android only — rasterize to GPU texture during animations. See [Hardware Layers](#hardware-layers-android). Default: `false` |
 | `style` | `ViewStyle` | Non-animated styles (layout, colors, borders, etc.) |
 | `children` | `ReactNode` | Child elements |
 | ...rest | `ViewProps` | All other standard View props |
@@ -210,6 +235,7 @@ Properties not specified in `animate` default to their identity values.
   type: 'timing';
   duration?: number;  // default: 300 (ms)
   easing?: 'linear' | 'easeIn' | 'easeOut' | 'easeInOut';  // default: 'easeInOut'
+  loop?: 'repeat' | 'reverse';  // default: none
 }
 ```
 
@@ -223,6 +249,25 @@ Properties not specified in `animate` default to their identity values.
   mass?: number;       // default: 1
 }
 ```
+
+## Hardware Layers (Android)
+
+Setting `useHardwareLayer` rasterizes the view into a GPU texture for the duration of the animation. This means animated property changes (opacity, scale, rotation) are composited on the RenderThread without redrawing the view hierarchy — useful for complex views with many children.
+
+```tsx
+<EaseView
+  animate={{ opacity: isVisible ? 1 : 0 }}
+  useHardwareLayer
+/>
+```
+
+**Trade-offs:**
+
+- Faster rendering for opacity, scale, and rotation animations (RenderThread compositing).
+- Uses additional GPU memory for the off-screen texture (proportional to view size).
+- Children that overflow the view's layout bounds are **clipped** by the texture. This causes visual artifacts when animating `translateX`/`translateY` on views with overflowing content.
+
+No-op on iOS where Core Animation already composites off the main thread.
 
 ## How It Works
 
