@@ -181,6 +181,34 @@ Animations are interruptible by default. If you change `animate` values while an
 />
 ```
 
+### Transform Origin
+
+By default, scale and rotation animate from the view's center. Use `transformOrigin` to change the pivot point with 0–1 fractions.
+
+```tsx
+// Rotate from top-left corner
+<EaseView
+  animate={{ rotate: isOpen ? 45 : 0 }}
+  transformOrigin={{ x: 0, y: 0 }}
+  transition={{ type: 'spring', damping: 12, stiffness: 200, mass: 1 }}
+  style={styles.card}
+/>
+
+// Scale from bottom-right
+<EaseView
+  animate={{ scale: active ? 1.2 : 1 }}
+  transformOrigin={{ x: 1, y: 1 }}
+  transition={{ type: 'spring', damping: 15, stiffness: 120, mass: 1 }}
+  style={styles.card}
+/>
+```
+
+| Value | Position |
+|---|---|
+| `{ x: 0, y: 0 }` | Top-left |
+| `{ x: 0.5, y: 0.5 }` | Center (default) |
+| `{ x: 1, y: 1 }` | Bottom-right |
+
 ### Style Handling
 
 Use `animate` for animated properties and `style` for everything else. If you accidentally put `opacity` or `transform` in `style`, they will be ignored and you'll get a dev warning.
@@ -210,7 +238,8 @@ A `View` that animates property changes using native platform APIs.
 | `animate` | `AnimateProps` | Target values for animated properties |
 | `initialAnimate` | `AnimateProps` | Starting values for enter animations (animates to `animate` on mount) |
 | `transition` | `Transition` | Animation configuration (timing or spring) |
-| `onTransitionEnd` | `(event) => void` | Called when an animation finishes with `{ finished: boolean }` |
+| `onTransitionEnd` | `(event) => void` | Called when all animations complete with `{ finished: boolean }` |
+| `transformOrigin` | `{ x?: number; y?: number }` | Pivot point for scale/rotation as 0–1 fractions. Default: `{ x: 0.5, y: 0.5 }` (center) |
 | `useHardwareLayer` | `boolean` | Android only — rasterize to GPU texture during animations. See [Hardware Layers](#hardware-layers-android). Default: `false` |
 | `style` | `ViewStyle` | Non-animated styles (layout, colors, borders, etc.) |
 | `children` | `ReactNode` | Child elements |
