@@ -16,16 +16,6 @@ Lightweight declarative animations powered by platform APIs. Uses Core Animation
 - **Shared element transitions** — Use Reanimated or React Navigation's shared element transitions.
 - **Old architecture** — Fabric (new architecture) only.
 
-## When to use this vs Reanimated
-
-| Use react-native-ease | Use Reanimated |
-|---|---|
-| Fade in a view | Gesture-driven animations |
-| Slide/translate on state change | Complex interpolations |
-| Scale/rotate on press | Shared values across components |
-| Simple enter animations | Layout animations |
-| You want zero config | You need animation worklets |
-
 ## Installation
 
 ```bash
@@ -53,6 +43,17 @@ function FadeCard({ visible, children }) {
 ```
 
 `EaseView` works like a regular `View` — it accepts children, styles, and all standard view props. When values in `animate` change, it smoothly transitions to the new values using native platform animations.
+
+## When to use this vs Reanimated
+
+| Use case | Ease | Reanimated |
+|---|---|---|
+| Fade/slide/scale on state change | ✅ | |
+| Enter/exit animations | ✅ | |
+| Gesture-driven animations (pan, pinch) | | ✅ |
+| Shared values across components | | ✅ |
+| Layout animations (width, height) | | ✅ |
+| Complex interpolations & chaining | | ✅ |
 
 ## Guide
 
