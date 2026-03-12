@@ -73,4 +73,6 @@ export type AnimateProps = {
   rotateX?: number;
   /** Y-axis rotation in degrees (3D). @default 0 */
   rotateY?: number;
+  /** Border radius in pixels. Uses hardware-accelerated clipping (ViewOutlineProvider on Android, layer.cornerRadius on iOS). @default 0 */
+  borderRadius?: number;
 };

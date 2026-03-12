@@ -18,6 +18,7 @@ export interface NativeProps extends ViewProps {
   animateRotate?: CodegenTypes.WithDefault<CodegenTypes.Float, 0.0>;
   animateRotateX?: CodegenTypes.WithDefault<CodegenTypes.Float, 0.0>;
   animateRotateY?: CodegenTypes.WithDefault<CodegenTypes.Float, 0.0>;
+  animateBorderRadius?: CodegenTypes.WithDefault<CodegenTypes.Float, 0.0>;
 
   // Initial values for enter animations
   initialAnimateOpacity?: CodegenTypes.WithDefault<CodegenTypes.Float, 1.0>;
@@ -28,6 +29,10 @@ export interface NativeProps extends ViewProps {
   initialAnimateRotate?: CodegenTypes.WithDefault<CodegenTypes.Float, 0.0>;
   initialAnimateRotateX?: CodegenTypes.WithDefault<CodegenTypes.Float, 0.0>;
   initialAnimateRotateY?: CodegenTypes.WithDefault<CodegenTypes.Float, 0.0>;
+  initialAnimateBorderRadius?: CodegenTypes.WithDefault<
+    CodegenTypes.Float,
+    0.0
+  >;
 
   // Transition config
   transitionType?: CodegenTypes.WithDefault<

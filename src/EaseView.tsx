@@ -18,9 +18,11 @@ const IDENTITY = {
   rotate: 0,
   rotateX: 0,
   rotateY: 0,
+  borderRadius: 0,
 };
 
 /** Bitmask flags — must match native constants. */
+/* eslint-disable no-bitwise */
 const MASK_OPACITY = 1 << 0;
 const MASK_TRANSLATE_X = 1 << 1;
 const MASK_TRANSLATE_Y = 1 << 2;
@@ -29,6 +31,8 @@ const MASK_SCALE_Y = 1 << 4;
 const MASK_ROTATE = 1 << 5;
 const MASK_ROTATE_X = 1 << 6;
 const MASK_ROTATE_Y = 1 << 7;
+const MASK_BORDER_RADIUS = 1 << 8;
+/* eslint-enable no-bitwise */
 
 /** Maps animate prop keys to style keys that conflict. */
 const ANIMATE_TO_STYLE_KEYS: Record<keyof AnimateProps, string> = {
@@ -41,6 +45,7 @@ const ANIMATE_TO_STYLE_KEYS: Record<keyof AnimateProps, string> = {
   rotate: 'transform',
   rotateX: 'transform',
   rotateY: 'transform',
+  borderRadius: 'borderRadius',
 };
 
 /** Preset easing curves as cubic bezier control points. */
@@ -93,6 +98,7 @@ export function EaseView({
 }: EaseViewProps) {
   // Compute bitmask of which properties are animated.
   // Native uses this to skip non-animated properties (lets style handle them).
+  /* eslint-disable no-bitwise */
   let animatedProperties = 0;
   if (animate?.opacity != null) animatedProperties |= MASK_OPACITY;
   if (animate?.translateX != null) animatedProperties |= MASK_TRANSLATE_X;
@@ -104,6 +110,8 @@ export function EaseView({
   if (animate?.rotate != null) animatedProperties |= MASK_ROTATE;
   if (animate?.rotateX != null) animatedProperties |= MASK_ROTATE_X;
   if (animate?.rotateY != null) animatedProperties |= MASK_ROTATE_Y;
+  if (animate?.borderRadius != null) animatedProperties |= MASK_BORDER_RADIUS;
+  /* eslint-enable no-bitwise */
 
   // Resolve animate values (identity defaults for non-animated — safe values).
   const resolved = {
@@ -222,6 +230,7 @@ export function EaseView({
       animateRotate={resolved.rotate}
       animateRotateX={resolved.rotateX}
       animateRotateY={resolved.rotateY}
+      animateBorderRadius={resolved.borderRadius}
       initialAnimateOpacity={resolvedInitial.opacity}
       initialAnimateTranslateX={resolvedInitial.translateX}
       initialAnimateTranslateY={resolvedInitial.translateY}
@@ -230,6 +239,7 @@ export function EaseView({
       initialAnimateRotate={resolvedInitial.rotate}
       initialAnimateRotateX={resolvedInitial.rotateX}
       initialAnimateRotateY={resolvedInitial.rotateY}
+      initialAnimateBorderRadius={resolvedInitial.borderRadius}
       transitionType={transitionType}
       transitionDuration={transitionDuration}
       transitionEasingBezier={bezier}

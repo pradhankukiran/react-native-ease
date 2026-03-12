@@ -120,6 +120,11 @@ class EaseViewManager : ReactViewManager() {
         view.initialAnimateRotateY = value
     }
 
+    @ReactProp(name = "initialAnimateBorderRadius", defaultFloat = 0f)
+    fun setInitialAnimateBorderRadius(view: EaseView, value: Float) {
+        view.initialAnimateBorderRadius = PixelUtil.toPixelFromDIP(value)
+    }
+
     // --- Transition config setters ---
 
     @ReactProp(name = "transitionType")
@@ -165,6 +170,13 @@ class EaseViewManager : ReactViewManager() {
     @ReactProp(name = "transitionLoop")
     fun setTransitionLoop(view: EaseView, value: String?) {
         view.transitionLoop = value ?: "none"
+    }
+
+    // --- Border radius ---
+
+    @ReactProp(name = "animateBorderRadius", defaultFloat = 0f)
+    fun setAnimateBorderRadius(view: EaseView, value: Float) {
+        view.pendingBorderRadius = PixelUtil.toPixelFromDIP(value)
     }
 
     // --- Hardware layer ---

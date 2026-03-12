@@ -272,6 +272,70 @@ describe('EaseView', () => {
     });
   });
 
+  describe('animate borderRadius', () => {
+    it('passes animateBorderRadius to native', () => {
+      render(<EaseView testID="ease" animate={{ borderRadius: 16 }} />);
+      expect(getNativeProps().animateBorderRadius).toBe(16);
+    });
+
+    it('defaults animateBorderRadius to 0 when not in animate', () => {
+      render(<EaseView testID="ease" />);
+      expect(getNativeProps().animateBorderRadius).toBe(0);
+    });
+
+    it('sets bitmask for borderRadius (1 << 8 = 256)', () => {
+      render(<EaseView testID="ease" animate={{ borderRadius: 16 }} />);
+      // borderRadius = 1<<8 = 256
+      expect(getNativeProps().animatedProperties).toBe(256);
+    });
+
+    it('strips style borderRadius when animate.borderRadius is set', () => {
+      const spy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      render(
+        <EaseView
+          testID="ease"
+          animate={{ borderRadius: 16 }}
+          style={{ borderRadius: 8, backgroundColor: 'red' }}
+        />,
+      );
+      const props = getNativeProps();
+      expect(props.style).toEqual(
+        expect.objectContaining({ backgroundColor: 'red' }),
+      );
+      expect(props.style.borderRadius).toBeUndefined();
+      expect(spy).toHaveBeenCalledWith(
+        expect.stringContaining('borderRadius found in both style and animate'),
+      );
+      spy.mockRestore();
+    });
+
+    it('keeps style borderRadius when not in animate', () => {
+      render(
+        <EaseView
+          testID="ease"
+          style={{ borderRadius: 8, backgroundColor: 'red' }}
+        />,
+      );
+      const props = getNativeProps();
+      expect(props.style).toEqual(
+        expect.objectContaining({ borderRadius: 8, backgroundColor: 'red' }),
+      );
+    });
+
+    it('passes initialAnimateBorderRadius', () => {
+      render(
+        <EaseView
+          testID="ease"
+          initialAnimate={{ borderRadius: 0 }}
+          animate={{ borderRadius: 16 }}
+        />,
+      );
+      const props = getNativeProps();
+      expect(props.initialAnimateBorderRadius).toBe(0);
+      expect(props.animateBorderRadius).toBe(16);
+    });
+  });
+
   describe('style conflict handling', () => {
     it('warns when opacity is in both style and animate', () => {
       const spy = jest.spyOn(console, 'warn').mockImplementation(() => {});

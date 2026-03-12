@@ -14,6 +14,7 @@ using namespace facebook::react;
 // Animation key constants
 static NSString *const kAnimKeyOpacity = @"ease_opacity";
 static NSString *const kAnimKeyTransform = @"ease_transform";
+static NSString *const kAnimKeyCornerRadius = @"ease_cornerRadius";
 
 static inline CGFloat degreesToRadians(CGFloat degrees) {
   return degrees * M_PI / 180.0;
@@ -45,6 +46,7 @@ static const int kMaskScaleY = 1 << 4;
 static const int kMaskRotate = 1 << 5;
 static const int kMaskRotateX = 1 << 6;
 static const int kMaskRotateY = 1 << 7;
+static const int kMaskBorderRadius = 1 << 8;
 static const int kMaskAnyTransform = kMaskTranslateX | kMaskTranslateY |
                                      kMaskScaleX | kMaskScaleY | kMaskRotate |
                                      kMaskRotateX | kMaskRotateY;
@@ -249,6 +251,10 @@ static const int kMaskAnyTransform = kMaskTranslateX | kMaskTranslateY |
         (mask & kMaskOpacity) &&
         newViewProps.initialAnimateOpacity != newViewProps.animateOpacity;
 
+    BOOL hasInitialBorderRadius =
+        (mask & kMaskBorderRadius) && newViewProps.initialAnimateBorderRadius !=
+                                          newViewProps.animateBorderRadius;
+
     BOOL hasInitialTransform = NO;
     CATransform3D initialT = CATransform3DIdentity;
     CATransform3D targetT = CATransform3DIdentity;
@@ -259,12 +265,18 @@ static const int kMaskAnyTransform = kMaskTranslateX | kMaskTranslateY |
       hasInitialTransform = !CATransform3DEqualToTransform(initialT, targetT);
     }
 
-    if (hasInitialOpacity || hasInitialTransform) {
+    if (hasInitialOpacity || hasInitialTransform || hasInitialBorderRadius) {
       // Set initial values
       if (mask & kMaskOpacity)
         self.layer.opacity = newViewProps.initialAnimateOpacity;
       if (hasTransform)
         self.layer.transform = initialT;
+      if (mask & kMaskBorderRadius) {
+        self.layer.cornerRadius = newViewProps.initialAnimateBorderRadius;
+        self.layer.masksToBounds =
+            newViewProps.initialAnimateBorderRadius > 0 ||
+            newViewProps.animateBorderRadius > 0;
+      }
 
       // Animate from initial to target
       if (hasInitialOpacity) {
@@ -285,12 +297,26 @@ static const int kMaskAnyTransform = kMaskTranslateX | kMaskTranslateY |
                                  props:newViewProps
                                   loop:YES];
       }
+      if (hasInitialBorderRadius) {
+        self.layer.cornerRadius = newViewProps.animateBorderRadius;
+        [self
+            applyAnimationForKeyPath:@"cornerRadius"
+                        animationKey:kAnimKeyCornerRadius
+                           fromValue:@(newViewProps.initialAnimateBorderRadius)
+                             toValue:@(newViewProps.animateBorderRadius)
+                               props:newViewProps
+                                loop:YES];
+      }
     } else {
       // No initial animation — set target values directly
       if (mask & kMaskOpacity)
         self.layer.opacity = newViewProps.animateOpacity;
       if (hasTransform)
         self.layer.transform = targetT;
+      if (mask & kMaskBorderRadius) {
+        self.layer.cornerRadius = newViewProps.animateBorderRadius;
+        self.layer.masksToBounds = newViewProps.animateBorderRadius > 0;
+      }
     }
   } else if (newViewProps.transitionType == EaseViewTransitionType::None) {
     // No transition — set values immediately
@@ -299,6 +325,10 @@ static const int kMaskAnyTransform = kMaskTranslateX | kMaskTranslateY |
       self.layer.opacity = newViewProps.animateOpacity;
     if (hasTransform)
       self.layer.transform = [self targetTransformFromProps:newViewProps];
+    if (mask & kMaskBorderRadius) {
+      self.layer.cornerRadius = newViewProps.animateBorderRadius;
+      self.layer.masksToBounds = newViewProps.animateBorderRadius > 0;
+    }
     if (_eventEmitter) {
       auto emitter =
           std::static_pointer_cast<const EaseViewEventEmitter>(_eventEmitter);
@@ -346,6 +376,19 @@ static const int kMaskAnyTransform = kMaskTranslateX | kMaskTranslateY |
                                   loop:NO];
       }
     }
+
+    if ((mask & kMaskBorderRadius) &&
+        oldViewProps.animateBorderRadius != newViewProps.animateBorderRadius) {
+      self.layer.cornerRadius = newViewProps.animateBorderRadius;
+      self.layer.masksToBounds = newViewProps.animateBorderRadius > 0;
+      [self applyAnimationForKeyPath:@"cornerRadius"
+                        animationKey:kAnimKeyCornerRadius
+                           fromValue:[self presentationValueForKeyPath:
+                                               @"cornerRadius"]
+                             toValue:@(newViewProps.animateBorderRadius)
+                               props:newViewProps
+                                loop:NO];
+    }
   }
 
   [CATransaction commit];
@@ -385,6 +428,8 @@ static const int kMaskAnyTransform = kMaskTranslateX | kMaskTranslateY |
   self.layer.anchorPoint = CGPointMake(0.5, 0.5);
   self.layer.opacity = 1.0;
   self.layer.transform = CATransform3DIdentity;
+  self.layer.cornerRadius = 0;
+  self.layer.masksToBounds = NO;
 }
 
 @end

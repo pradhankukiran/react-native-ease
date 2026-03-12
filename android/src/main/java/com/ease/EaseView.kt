@@ -4,7 +4,9 @@ import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
 import android.animation.ObjectAnimator
 import android.content.Context
+import android.graphics.Outline
 import android.view.View
+import android.view.ViewOutlineProvider
 import android.view.animation.PathInterpolator
 import androidx.dynamicanimation.animation.DynamicAnimation
 import androidx.dynamicanimation.animation.SpringAnimation
@@ -23,6 +25,7 @@ class EaseView(context: Context) : ReactViewGroup(context) {
     private var prevRotate: Float? = null
     private var prevRotateX: Float? = null
     private var prevRotateY: Float? = null
+    private var prevBorderRadius: Float? = null
 
     // --- First mount tracking ---
     private var isFirstMount: Boolean = true
@@ -48,6 +51,23 @@ class EaseView(context: Context) : ReactViewGroup(context) {
             applyTransformOrigin()
         }
 
+    // --- Border radius (hardware-accelerated via outline clipping) ---
+    // Animated via ObjectAnimator("borderRadius") — setter invalidates outline each frame.
+    private var _borderRadius: Float = 0f
+
+    fun getBorderRadius(): Float = _borderRadius
+    fun setBorderRadius(value: Float) {
+        if (_borderRadius != value) {
+            _borderRadius = value
+            if (value > 0f) {
+                clipToOutline = true
+            } else {
+                clipToOutline = false
+            }
+            invalidateOutline()
+        }
+    }
+
     // --- Hardware layer ---
     var useHardwareLayer: Boolean = false
 
@@ -68,6 +88,7 @@ class EaseView(context: Context) : ReactViewGroup(context) {
     var initialAnimateRotate: Float = 0.0f
     var initialAnimateRotateX: Float = 0.0f
     var initialAnimateRotateY: Float = 0.0f
+    var initialAnimateBorderRadius: Float = 0.0f
 
     // --- Pending animate values (buffered per-view, applied in onAfterUpdateTransaction) ---
     var pendingOpacity: Float = 1.0f
@@ -78,6 +99,7 @@ class EaseView(context: Context) : ReactViewGroup(context) {
     var pendingRotate: Float = 0.0f
     var pendingRotateX: Float = 0.0f
     var pendingRotateY: Float = 0.0f
+    var pendingBorderRadius: Float = 0.0f
 
     // --- Running animations ---
     private val runningAnimators = mutableMapOf<String, ObjectAnimator>()
@@ -97,12 +119,19 @@ class EaseView(context: Context) : ReactViewGroup(context) {
         const val MASK_ROTATE = 1 shl 5
         const val MASK_ROTATE_X = 1 shl 6
         const val MASK_ROTATE_Y = 1 shl 7
-
+        const val MASK_BORDER_RADIUS = 1 shl 8
     }
 
     init {
         // Set camera distance for 3D perspective rotations (rotateX/rotateY)
         cameraDistance = resources.displayMetrics.density * 850f
+
+        // ViewOutlineProvider reads _borderRadius dynamically — set once, invalidated on each frame.
+        outlineProvider = object : ViewOutlineProvider() {
+            override fun getOutline(view: View, outline: Outline) {
+                outline.setRoundRect(0, 0, view.width, view.height, _borderRadius)
+            }
+        }
     }
 
     // --- Hardware layer management ---
@@ -140,7 +169,7 @@ class EaseView(context: Context) : ReactViewGroup(context) {
     }
 
     fun applyPendingAnimateValues() {
-        applyAnimateValues(pendingOpacity, pendingTranslateX, pendingTranslateY, pendingScaleX, pendingScaleY, pendingRotate, pendingRotateX, pendingRotateY)
+        applyAnimateValues(pendingOpacity, pendingTranslateX, pendingTranslateY, pendingScaleX, pendingScaleY, pendingRotate, pendingRotateX, pendingRotateY, pendingBorderRadius)
     }
 
     private fun applyAnimateValues(
@@ -151,7 +180,8 @@ class EaseView(context: Context) : ReactViewGroup(context) {
         scaleY: Float,
         rotate: Float,
         rotateX: Float,
-        rotateY: Float
+        rotateY: Float,
+        borderRadius: Float
     ) {
         if (pendingBatchAnimationCount > 0) {
             onTransitionEnd?.invoke(false)
@@ -175,7 +205,8 @@ class EaseView(context: Context) : ReactViewGroup(context) {
                 (mask and MASK_SCALE_Y != 0 && initialAnimateScaleY != scaleY) ||
                 (mask and MASK_ROTATE != 0 && initialAnimateRotate != rotate) ||
                 (mask and MASK_ROTATE_X != 0 && initialAnimateRotateX != rotateX) ||
-                (mask and MASK_ROTATE_Y != 0 && initialAnimateRotateY != rotateY)
+                (mask and MASK_ROTATE_Y != 0 && initialAnimateRotateY != rotateY) ||
+                (mask and MASK_BORDER_RADIUS != 0 && initialAnimateBorderRadius != borderRadius)
 
             if (hasInitialAnimation) {
                 // Set initial values for animated properties
@@ -187,6 +218,7 @@ class EaseView(context: Context) : ReactViewGroup(context) {
                 if (mask and MASK_ROTATE != 0) this.rotation = initialAnimateRotate
                 if (mask and MASK_ROTATE_X != 0) this.rotationX = initialAnimateRotateX
                 if (mask and MASK_ROTATE_Y != 0) this.rotationY = initialAnimateRotateY
+                if (mask and MASK_BORDER_RADIUS != 0) setBorderRadius(initialAnimateBorderRadius)
 
                 // Animate properties that differ from initial to target
                 if (mask and MASK_OPACITY != 0 && initialAnimateOpacity != opacity) {
@@ -213,6 +245,9 @@ class EaseView(context: Context) : ReactViewGroup(context) {
                 if (mask and MASK_ROTATE_Y != 0 && initialAnimateRotateY != rotateY) {
                     animateProperty("rotationY", DynamicAnimation.ROTATION_Y, initialAnimateRotateY, rotateY, loop = true)
                 }
+                if (mask and MASK_BORDER_RADIUS != 0 && initialAnimateBorderRadius != borderRadius) {
+                    animateProperty("borderRadius", null, initialAnimateBorderRadius, borderRadius, loop = true)
+                }
             } else {
                 // No initial animation — set target values directly (skip non-animated)
                 if (mask and MASK_OPACITY != 0) this.alpha = opacity
@@ -223,6 +258,7 @@ class EaseView(context: Context) : ReactViewGroup(context) {
                 if (mask and MASK_ROTATE != 0) this.rotation = rotate
                 if (mask and MASK_ROTATE_X != 0) this.rotationX = rotateX
                 if (mask and MASK_ROTATE_Y != 0) this.rotationY = rotateY
+                if (mask and MASK_BORDER_RADIUS != 0) setBorderRadius(borderRadius)
             }
         } else if (transitionType == "none") {
             // No transition — set values immediately, cancel running animations
@@ -235,6 +271,7 @@ class EaseView(context: Context) : ReactViewGroup(context) {
             if (mask and MASK_ROTATE != 0) this.rotation = rotate
             if (mask and MASK_ROTATE_X != 0) this.rotationX = rotateX
             if (mask and MASK_ROTATE_Y != 0) this.rotationY = rotateY
+            if (mask and MASK_BORDER_RADIUS != 0) setBorderRadius(borderRadius)
             onTransitionEnd?.invoke(true)
         } else {
             // Subsequent updates: animate changed properties (skip non-animated)
@@ -277,6 +314,11 @@ class EaseView(context: Context) : ReactViewGroup(context) {
                 val from = getCurrentValue("rotationY")
                 animateProperty("rotationY", DynamicAnimation.ROTATION_Y, from, rotateY)
             }
+
+            if (prevBorderRadius != null && mask and MASK_BORDER_RADIUS != 0 && prevBorderRadius != borderRadius) {
+                val from = getCurrentValue("borderRadius")
+                animateProperty("borderRadius", null, from, borderRadius)
+            }
         }
 
         prevOpacity = opacity
@@ -287,6 +329,7 @@ class EaseView(context: Context) : ReactViewGroup(context) {
         prevRotate = rotate
         prevRotateX = rotateX
         prevRotateY = rotateY
+        prevBorderRadius = borderRadius
     }
 
     private fun getCurrentValue(propertyName: String): Float = when (propertyName) {
@@ -298,17 +341,18 @@ class EaseView(context: Context) : ReactViewGroup(context) {
         "rotation" -> this.rotation
         "rotationX" -> this.rotationX
         "rotationY" -> this.rotationY
+        "borderRadius" -> getBorderRadius()
         else -> 0f
     }
 
     private fun animateProperty(
         propertyName: String,
-        viewProperty: DynamicAnimation.ViewProperty,
+        viewProperty: DynamicAnimation.ViewProperty?,
         fromValue: Float,
         toValue: Float,
         loop: Boolean = false
     ) {
-        if (transitionType == "spring") {
+        if (transitionType == "spring" && viewProperty != null) {
             animateSpring(viewProperty, toValue)
         } else {
             animateTiming(propertyName, fromValue, toValue, loop)
@@ -479,6 +523,7 @@ class EaseView(context: Context) : ReactViewGroup(context) {
         prevRotate = null
         prevRotateX = null
         prevRotateY = null
+        prevBorderRadius = null
 
         this.alpha = 1f
         this.translationX = 0f
@@ -488,6 +533,7 @@ class EaseView(context: Context) : ReactViewGroup(context) {
         this.rotation = 0f
         this.rotationX = 0f
         this.rotationY = 0f
+        setBorderRadius(0f)
 
         isFirstMount = true
         transitionLoop = "none"

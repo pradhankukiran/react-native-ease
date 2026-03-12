@@ -147,6 +147,23 @@ Use `{ type: 'none' }` to apply values immediately without animation. Useful for
 
 `onTransitionEnd` fires immediately with `{ finished: true }`.
 
+### Border Radius
+
+`borderRadius` can be animated just like other properties. It uses hardware-accelerated platform APIs — `ViewOutlineProvider` + `clipToOutline` on Android and `layer.cornerRadius` + `layer.masksToBounds` on iOS. Unlike RN's style-based `borderRadius` (which uses a Canvas drawable on Android), this clips children properly and is GPU-accelerated.
+
+```tsx
+<EaseView
+  animate={{ borderRadius: expanded ? 0 : 16 }}
+  transition={{ type: 'timing', duration: 300 }}
+  style={styles.card}
+>
+  <Image source={heroImage} style={styles.image} />
+  <Text>Content is clipped to rounded corners</Text>
+</EaseView>
+```
+
+When `borderRadius` is in `animate`, any `borderRadius` in `style` is automatically stripped to avoid conflicts.
+
 ### Animatable Properties
 
 All properties are set in the `animate` prop as flat values (no transform array).
@@ -163,6 +180,7 @@ All properties are set in the `animate` prop as flat values (no transform array)
     rotate: 0,        // Z-axis rotation in degrees
     rotateX: 0,       // X-axis rotation in degrees (3D)
     rotateY: 0,       // Y-axis rotation in degrees (3D)
+    borderRadius: 0,  // pixels (hardware-accelerated, clips children)
   }}
 />
 ```
@@ -306,6 +324,7 @@ A `View` that animates property changes using native platform APIs.
 | `rotate` | `number` | `0` | Z-axis rotation in degrees |
 | `rotateX` | `number` | `0` | X-axis rotation in degrees (3D) |
 | `rotateY` | `number` | `0` | Y-axis rotation in degrees (3D) |
+| `borderRadius` | `number` | `0` | Border radius in pixels (hardware-accelerated, clips children) |
 
 Properties not specified in `animate` default to their identity values.
 
