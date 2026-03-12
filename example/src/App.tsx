@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -391,6 +391,36 @@ function CombinedDemo() {
   );
 }
 
+function StyleReRenderDemo() {
+  const [moved, setMoved] = useState(false);
+  const [opacity, setOpacity] = useState(0.5);
+
+  // Re-render style every 500ms to simulate frequent React re-renders
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setOpacity((o) => (o === 0.5 ? 0.8 : 0.5));
+    }, 500);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <Section title="Style Re-render Stress Test">
+      <Text style={styles.reRenderHint}>
+        Style opacity toggles every 500ms while transform animates
+      </Text>
+      <EaseView
+        animate={{ translateX: moved ? 150 : 0, scale: moved ? 1.2 : 1 }}
+        transition={{ type: 'spring', damping: 12, stiffness: 120, mass: 1 }}
+        style={[styles.box, { opacity }]}
+      />
+      <Button
+        label={moved ? 'Back' : 'Move'}
+        onPress={() => setMoved((v) => !v)}
+      />
+    </Section>
+  );
+}
+
 function DemosScreen() {
   return (
     <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -415,6 +445,7 @@ function DemosScreen() {
       <BackgroundColorDemo />
       <CustomEasingDemo />
       <CombinedDemo />
+      <StyleReRenderDemo />
     </ScrollView>
   );
 }
@@ -463,6 +494,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   interruptHint: {
+    color: '#8888aa',
+    fontSize: 13,
+    marginBottom: 12,
+  },
+  reRenderHint: {
     color: '#8888aa',
     fontSize: 13,
     marginBottom: 12,
