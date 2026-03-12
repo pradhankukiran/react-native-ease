@@ -266,22 +266,6 @@ function InterruptDemo() {
   );
 }
 
-function FlipDemo() {
-  const [flipped, setFlipped] = useState(false);
-  return (
-    <Section title="3D Card Flip">
-      <EaseView
-        animate={{ rotateY: flipped ? 180 : 0 }}
-        transition={{ type: 'spring', damping: 15, stiffness: 120, mass: 1 }}
-        style={styles.flipCard}
-      >
-        <Text style={styles.flipCardText}>{flipped ? '🂠' : '🂡'}</Text>
-      </EaseView>
-      <Button label="Flip" onPress={() => setFlipped((v) => !v)} />
-    </Section>
-  );
-}
-
 function IndependentScaleDemo() {
   const [active, setActive] = useState(false);
   return (
@@ -423,7 +407,7 @@ function DemosScreen() {
       <ExitDemo />
       <InterruptDemo />
       <RotateDemo />
-      <FlipDemo />
+
       <IndependentScaleDemo />
       <TransformOriginDemo />
       <StyledCardDemo />
@@ -525,17 +509,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 10,
     fontWeight: '600',
-  },
-  flipCard: {
-    width: 100,
-    height: 140,
-    backgroundColor: '#4a90d9',
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  flipCardText: {
-    fontSize: 48,
   },
   animatedButton: {
     paddingHorizontal: 32,
