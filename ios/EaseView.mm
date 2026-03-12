@@ -9,12 +9,18 @@
 
 #import "RCTFabricComponentsPlugins.h"
 
+// Forward-declare private method so we can override it.
+@interface RCTViewComponentView ()
+- (void)invalidateLayer;
+@end
+
 using namespace facebook::react;
 
 // Animation key constants
 static NSString *const kAnimKeyOpacity = @"ease_opacity";
 static NSString *const kAnimKeyTransform = @"ease_transform";
 static NSString *const kAnimKeyCornerRadius = @"ease_cornerRadius";
+static NSString *const kAnimKeyBackgroundColor = @"ease_backgroundColor";
 
 static inline CGFloat degreesToRadians(CGFloat degrees) {
   return degrees * M_PI / 180.0;
@@ -47,6 +53,7 @@ static const int kMaskRotate = 1 << 5;
 static const int kMaskRotateX = 1 << 6;
 static const int kMaskRotateY = 1 << 7;
 static const int kMaskBorderRadius = 1 << 8;
+static const int kMaskBackgroundColor = 1 << 9;
 static const int kMaskAnyTransform = kMaskTranslateX | kMaskTranslateY |
                                      kMaskScaleX | kMaskScaleY | kMaskRotate |
                                      kMaskRotateX | kMaskRotateY;
@@ -217,6 +224,8 @@ static const int kMaskAnyTransform = kMaskTranslateX | kMaskTranslateY |
   const auto &newViewProps =
       *std::static_pointer_cast<const EaseViewProps>(props);
 
+  [super updateProps:props oldProps:oldProps];
+
   [CATransaction begin];
   [CATransaction setDisableActions:YES];
 
@@ -255,6 +264,11 @@ static const int kMaskAnyTransform = kMaskTranslateX | kMaskTranslateY |
         (mask & kMaskBorderRadius) && newViewProps.initialAnimateBorderRadius !=
                                           newViewProps.animateBorderRadius;
 
+    BOOL hasInitialBackgroundColor =
+        (mask & kMaskBackgroundColor) &&
+        newViewProps.initialAnimateBackgroundColor !=
+            newViewProps.animateBackgroundColor;
+
     BOOL hasInitialTransform = NO;
     CATransform3D initialT = CATransform3DIdentity;
     CATransform3D targetT = CATransform3DIdentity;
@@ -265,7 +279,8 @@ static const int kMaskAnyTransform = kMaskTranslateX | kMaskTranslateY |
       hasInitialTransform = !CATransform3DEqualToTransform(initialT, targetT);
     }
 
-    if (hasInitialOpacity || hasInitialTransform || hasInitialBorderRadius) {
+    if (hasInitialOpacity || hasInitialTransform || hasInitialBorderRadius ||
+        hasInitialBackgroundColor) {
       // Set initial values
       if (mask & kMaskOpacity)
         self.layer.opacity = newViewProps.initialAnimateOpacity;
@@ -277,6 +292,11 @@ static const int kMaskAnyTransform = kMaskTranslateX | kMaskTranslateY |
             newViewProps.initialAnimateBorderRadius > 0 ||
             newViewProps.animateBorderRadius > 0;
       }
+      if (mask & kMaskBackgroundColor)
+        self.layer.backgroundColor =
+            RCTUIColorFromSharedColor(
+                newViewProps.initialAnimateBackgroundColor)
+                .CGColor;
 
       // Animate from initial to target
       if (hasInitialOpacity) {
@@ -307,6 +327,22 @@ static const int kMaskAnyTransform = kMaskTranslateX | kMaskTranslateY |
                                props:newViewProps
                                 loop:YES];
       }
+      if (hasInitialBackgroundColor) {
+        self.layer.backgroundColor =
+            RCTUIColorFromSharedColor(newViewProps.animateBackgroundColor)
+                .CGColor;
+        [self applyAnimationForKeyPath:@"backgroundColor"
+                          animationKey:kAnimKeyBackgroundColor
+                             fromValue:(__bridge id)RCTUIColorFromSharedColor(
+                                           newViewProps
+                                               .initialAnimateBackgroundColor)
+                                           .CGColor
+                               toValue:(__bridge id)RCTUIColorFromSharedColor(
+                                           newViewProps.animateBackgroundColor)
+                                           .CGColor
+                                 props:newViewProps
+                                  loop:YES];
+      }
     } else {
       // No initial animation — set target values directly
       if (mask & kMaskOpacity)
@@ -317,6 +353,10 @@ static const int kMaskAnyTransform = kMaskTranslateX | kMaskTranslateY |
         self.layer.cornerRadius = newViewProps.animateBorderRadius;
         self.layer.masksToBounds = newViewProps.animateBorderRadius > 0;
       }
+      if (mask & kMaskBackgroundColor)
+        self.layer.backgroundColor =
+            RCTUIColorFromSharedColor(newViewProps.animateBackgroundColor)
+                .CGColor;
     }
   } else if (newViewProps.transitionType == EaseViewTransitionType::None) {
     // No transition — set values immediately
@@ -329,6 +369,10 @@ static const int kMaskAnyTransform = kMaskTranslateX | kMaskTranslateY |
       self.layer.cornerRadius = newViewProps.animateBorderRadius;
       self.layer.masksToBounds = newViewProps.animateBorderRadius > 0;
     }
+    if (mask & kMaskBackgroundColor)
+      self.layer.backgroundColor =
+          RCTUIColorFromSharedColor(newViewProps.animateBackgroundColor)
+              .CGColor;
     if (_eventEmitter) {
       auto emitter =
           std::static_pointer_cast<const EaseViewEventEmitter>(_eventEmitter);
@@ -389,11 +433,58 @@ static const int kMaskAnyTransform = kMaskTranslateX | kMaskTranslateY |
                                props:newViewProps
                                 loop:NO];
     }
+
+    if ((mask & kMaskBackgroundColor) &&
+        oldViewProps.animateBackgroundColor !=
+            newViewProps.animateBackgroundColor) {
+      CGColorRef fromColor = (__bridge CGColorRef)
+          [self presentationValueForKeyPath:@"backgroundColor"];
+      CGColorRef toColor =
+          RCTUIColorFromSharedColor(newViewProps.animateBackgroundColor)
+              .CGColor;
+      self.layer.backgroundColor = toColor;
+      [self applyAnimationForKeyPath:@"backgroundColor"
+                        animationKey:kAnimKeyBackgroundColor
+                           fromValue:(__bridge id)fromColor
+                             toValue:(__bridge id)toColor
+                               props:newViewProps
+                                loop:NO];
+    }
   }
 
   [CATransaction commit];
+}
 
-  [super updateProps:props oldProps:oldProps];
+- (void)invalidateLayer {
+  [super invalidateLayer];
+
+  // super resets layer.opacity, layer.cornerRadius, and layer.backgroundColor
+  // from style props. Re-apply our animated values.
+  const auto &viewProps =
+      *std::static_pointer_cast<const EaseViewProps>(_props);
+  int mask = viewProps.animatedProperties;
+
+  if (!(mask & (kMaskOpacity | kMaskBorderRadius | kMaskBackgroundColor))) {
+    return;
+  }
+
+  [CATransaction begin];
+  [CATransaction setDisableActions:YES];
+  if (mask & kMaskOpacity) {
+    [self.layer removeAnimationForKey:@"opacity"];
+    self.layer.opacity = viewProps.animateOpacity;
+  }
+  if (mask & kMaskBorderRadius) {
+    [self.layer removeAnimationForKey:@"cornerRadius"];
+    self.layer.cornerRadius = viewProps.animateBorderRadius;
+    self.layer.masksToBounds = viewProps.animateBorderRadius > 0;
+  }
+  if (mask & kMaskBackgroundColor) {
+    [self.layer removeAnimationForKey:@"backgroundColor"];
+    self.layer.backgroundColor =
+        RCTUIColorFromSharedColor(viewProps.animateBackgroundColor).CGColor;
+  }
+  [CATransaction commit];
 }
 
 #pragma mark - CAAnimationDelegate
@@ -430,6 +521,7 @@ static const int kMaskAnyTransform = kMaskTranslateX | kMaskTranslateY |
   self.layer.transform = CATransform3DIdentity;
   self.layer.cornerRadius = 0;
   self.layer.masksToBounds = NO;
+  self.layer.backgroundColor = nil;
 }
 
 @end

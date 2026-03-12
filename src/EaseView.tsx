@@ -32,6 +32,7 @@ const MASK_ROTATE = 1 << 5;
 const MASK_ROTATE_X = 1 << 6;
 const MASK_ROTATE_Y = 1 << 7;
 const MASK_BORDER_RADIUS = 1 << 8;
+const MASK_BACKGROUND_COLOR = 1 << 9;
 /* eslint-enable no-bitwise */
 
 /** Maps animate prop keys to style keys that conflict. */
@@ -46,6 +47,7 @@ const ANIMATE_TO_STYLE_KEYS: Record<keyof AnimateProps, string> = {
   rotateX: 'transform',
   rotateY: 'transform',
   borderRadius: 'borderRadius',
+  backgroundColor: 'backgroundColor',
 };
 
 /** Preset easing curves as cubic bezier control points. */
@@ -111,6 +113,8 @@ export function EaseView({
   if (animate?.rotateX != null) animatedProperties |= MASK_ROTATE_X;
   if (animate?.rotateY != null) animatedProperties |= MASK_ROTATE_Y;
   if (animate?.borderRadius != null) animatedProperties |= MASK_BORDER_RADIUS;
+  if (animate?.backgroundColor != null)
+    animatedProperties |= MASK_BACKGROUND_COLOR;
   /* eslint-enable no-bitwise */
 
   // Resolve animate values (identity defaults for non-animated — safe values).
@@ -136,6 +140,10 @@ export function EaseView({
     rotateX: initial?.rotateX ?? IDENTITY.rotateX,
     rotateY: initial?.rotateY ?? IDENTITY.rotateY,
   };
+
+  // Resolve backgroundColor — passed as ColorValue directly (codegen handles conversion)
+  const animBgColor = animate?.backgroundColor ?? 'transparent';
+  const initialBgColor = initialAnimate?.backgroundColor ?? animBgColor;
 
   // Strip style keys that conflict with animated properties
   let cleanStyle: ViewProps['style'] = style;
@@ -231,6 +239,7 @@ export function EaseView({
       animateRotateX={resolved.rotateX}
       animateRotateY={resolved.rotateY}
       animateBorderRadius={resolved.borderRadius}
+      animateBackgroundColor={animBgColor}
       initialAnimateOpacity={resolvedInitial.opacity}
       initialAnimateTranslateX={resolvedInitial.translateX}
       initialAnimateTranslateY={resolvedInitial.translateY}
@@ -240,6 +249,7 @@ export function EaseView({
       initialAnimateRotateX={resolvedInitial.rotateX}
       initialAnimateRotateY={resolvedInitial.rotateY}
       initialAnimateBorderRadius={resolvedInitial.borderRadius}
+      initialAnimateBackgroundColor={initialBgColor}
       transitionType={transitionType}
       transitionDuration={transitionDuration}
       transitionEasingBezier={bezier}

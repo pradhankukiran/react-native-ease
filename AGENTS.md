@@ -52,6 +52,7 @@ transition={{ type: 'spring', damping: 10 }}  →  transitionType="spring", tran
 5. **Android:** Add `pending<Prop>` field, `@ReactProp` setter in `EaseViewManager.kt`, and handle in `applyAnimateValues()`
 6. **Recycle:** Reset the new property to its identity value in `prepareForRecycle` (iOS) and `cleanup()` (Android). Fabric recycles views — any property not reset will leak stale values to the next user of the view.
 7. Add tests and update README
+8. Add an example/demo in the example app (`example/src/App.tsx` or a new screen)
 
 ## Development Commands
 
@@ -72,8 +73,10 @@ yarn example android          # Build and run example on Android
 Before committing, always run:
 
 ```sh
-yarn format:check && yarn lint && yarn test
+yarn format:write && yarn lint && yarn test
 ```
+
+**Important:** Run `yarn format:write` (not `format:check`) first to auto-fix formatting before linting. This avoids redundant Prettier errors in lint output.
 
 Lefthook pre-commit hooks enforce ESLint and TypeScript checks. Fix all failures before committing.
 

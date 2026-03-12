@@ -1,3 +1,5 @@
+import type { ColorValue } from 'react-native';
+
 /** Cubic bezier control points: [x1, y1, x2, y2]. */
 export type CubicBezier = [number, number, number, number];
 
@@ -75,4 +77,6 @@ export type AnimateProps = {
   rotateY?: number;
   /** Border radius in pixels. Uses hardware-accelerated clipping (ViewOutlineProvider on Android, layer.cornerRadius on iOS). @default 0 */
   borderRadius?: number;
+  /** Background color. Accepts any React Native color value. @default 'transparent' */
+  backgroundColor?: ColorValue;
 };

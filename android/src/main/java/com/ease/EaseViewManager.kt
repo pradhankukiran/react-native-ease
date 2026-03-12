@@ -1,5 +1,6 @@
 package com.ease
 
+import android.graphics.Color
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.ReadableArray
 import com.facebook.react.bridge.WritableMap
@@ -177,6 +178,18 @@ class EaseViewManager : ReactViewManager() {
     @ReactProp(name = "animateBorderRadius", defaultFloat = 0f)
     fun setAnimateBorderRadius(view: EaseView, value: Float) {
         view.pendingBorderRadius = PixelUtil.toPixelFromDIP(value)
+    }
+
+    // --- Background color ---
+
+    @ReactProp(name = "animateBackgroundColor", customType = "Color")
+    fun setAnimateBackgroundColor(view: EaseView, value: Int?) {
+        view.pendingBackgroundColor = value ?: Color.TRANSPARENT
+    }
+
+    @ReactProp(name = "initialAnimateBackgroundColor", customType = "Color")
+    fun setInitialAnimateBackgroundColor(view: EaseView, value: Int?) {
+        view.initialAnimateBackgroundColor = value ?: Color.TRANSPARENT
     }
 
     // --- Hardware layer ---

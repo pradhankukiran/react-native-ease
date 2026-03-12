@@ -3,7 +3,9 @@ package com.ease
 import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
 import android.animation.ObjectAnimator
+import android.animation.ValueAnimator
 import android.content.Context
+import android.graphics.Color
 import android.graphics.Outline
 import android.view.View
 import android.view.ViewOutlineProvider
@@ -26,6 +28,8 @@ class EaseView(context: Context) : ReactViewGroup(context) {
     private var prevRotateX: Float? = null
     private var prevRotateY: Float? = null
     private var prevBorderRadius: Float? = null
+    private var prevBackgroundColor: Int? = null
+    private var currentBackgroundColor: Int = Color.TRANSPARENT
 
     // --- First mount tracking ---
     private var isFirstMount: Boolean = true
@@ -52,11 +56,13 @@ class EaseView(context: Context) : ReactViewGroup(context) {
         }
 
     // --- Border radius (hardware-accelerated via outline clipping) ---
-    // Animated via ObjectAnimator("borderRadius") — setter invalidates outline each frame.
+    // Animated via ObjectAnimator("animateBorderRadius") — setter invalidates outline each frame.
     private var _borderRadius: Float = 0f
 
-    fun getBorderRadius(): Float = _borderRadius
-    fun setBorderRadius(value: Float) {
+    @Suppress("unused") // Used by ObjectAnimator via reflection
+    fun getAnimateBorderRadius(): Float = _borderRadius
+    @Suppress("unused") // Used by ObjectAnimator via reflection
+    fun setAnimateBorderRadius(value: Float) {
         if (_borderRadius != value) {
             _borderRadius = value
             if (value > 0f) {
@@ -89,6 +95,7 @@ class EaseView(context: Context) : ReactViewGroup(context) {
     var initialAnimateRotateX: Float = 0.0f
     var initialAnimateRotateY: Float = 0.0f
     var initialAnimateBorderRadius: Float = 0.0f
+    var initialAnimateBackgroundColor: Int = Color.TRANSPARENT
 
     // --- Pending animate values (buffered per-view, applied in onAfterUpdateTransaction) ---
     var pendingOpacity: Float = 1.0f
@@ -100,9 +107,10 @@ class EaseView(context: Context) : ReactViewGroup(context) {
     var pendingRotateX: Float = 0.0f
     var pendingRotateY: Float = 0.0f
     var pendingBorderRadius: Float = 0.0f
+    var pendingBackgroundColor: Int = Color.TRANSPARENT
 
     // --- Running animations ---
-    private val runningAnimators = mutableMapOf<String, ObjectAnimator>()
+    private val runningAnimators = mutableMapOf<String, Animator>()
     private val runningSpringAnimations = mutableMapOf<DynamicAnimation.ViewProperty, SpringAnimation>()
 
     // --- Animated properties bitmask (set by ViewManager) ---
@@ -120,6 +128,7 @@ class EaseView(context: Context) : ReactViewGroup(context) {
         const val MASK_ROTATE_X = 1 shl 6
         const val MASK_ROTATE_Y = 1 shl 7
         const val MASK_BORDER_RADIUS = 1 shl 8
+        const val MASK_BACKGROUND_COLOR = 1 shl 9
     }
 
     init {
@@ -169,7 +178,7 @@ class EaseView(context: Context) : ReactViewGroup(context) {
     }
 
     fun applyPendingAnimateValues() {
-        applyAnimateValues(pendingOpacity, pendingTranslateX, pendingTranslateY, pendingScaleX, pendingScaleY, pendingRotate, pendingRotateX, pendingRotateY, pendingBorderRadius)
+        applyAnimateValues(pendingOpacity, pendingTranslateX, pendingTranslateY, pendingScaleX, pendingScaleY, pendingRotate, pendingRotateX, pendingRotateY, pendingBorderRadius, pendingBackgroundColor)
     }
 
     private fun applyAnimateValues(
@@ -181,7 +190,8 @@ class EaseView(context: Context) : ReactViewGroup(context) {
         rotate: Float,
         rotateX: Float,
         rotateY: Float,
-        borderRadius: Float
+        borderRadius: Float,
+        backgroundColor: Int
     ) {
         if (pendingBatchAnimationCount > 0) {
             onTransitionEnd?.invoke(false)
@@ -206,7 +216,8 @@ class EaseView(context: Context) : ReactViewGroup(context) {
                 (mask and MASK_ROTATE != 0 && initialAnimateRotate != rotate) ||
                 (mask and MASK_ROTATE_X != 0 && initialAnimateRotateX != rotateX) ||
                 (mask and MASK_ROTATE_Y != 0 && initialAnimateRotateY != rotateY) ||
-                (mask and MASK_BORDER_RADIUS != 0 && initialAnimateBorderRadius != borderRadius)
+                (mask and MASK_BORDER_RADIUS != 0 && initialAnimateBorderRadius != borderRadius) ||
+                (mask and MASK_BACKGROUND_COLOR != 0 && initialAnimateBackgroundColor != backgroundColor)
 
             if (hasInitialAnimation) {
                 // Set initial values for animated properties
@@ -218,7 +229,8 @@ class EaseView(context: Context) : ReactViewGroup(context) {
                 if (mask and MASK_ROTATE != 0) this.rotation = initialAnimateRotate
                 if (mask and MASK_ROTATE_X != 0) this.rotationX = initialAnimateRotateX
                 if (mask and MASK_ROTATE_Y != 0) this.rotationY = initialAnimateRotateY
-                if (mask and MASK_BORDER_RADIUS != 0) setBorderRadius(initialAnimateBorderRadius)
+                if (mask and MASK_BORDER_RADIUS != 0) setAnimateBorderRadius(initialAnimateBorderRadius)
+                if (mask and MASK_BACKGROUND_COLOR != 0) applyBackgroundColor(initialAnimateBackgroundColor)
 
                 // Animate properties that differ from initial to target
                 if (mask and MASK_OPACITY != 0 && initialAnimateOpacity != opacity) {
@@ -246,7 +258,10 @@ class EaseView(context: Context) : ReactViewGroup(context) {
                     animateProperty("rotationY", DynamicAnimation.ROTATION_Y, initialAnimateRotateY, rotateY, loop = true)
                 }
                 if (mask and MASK_BORDER_RADIUS != 0 && initialAnimateBorderRadius != borderRadius) {
-                    animateProperty("borderRadius", null, initialAnimateBorderRadius, borderRadius, loop = true)
+                    animateProperty("animateBorderRadius", null, initialAnimateBorderRadius, borderRadius, loop = true)
+                }
+                if (mask and MASK_BACKGROUND_COLOR != 0 && initialAnimateBackgroundColor != backgroundColor) {
+                    animateBackgroundColor(initialAnimateBackgroundColor, backgroundColor, loop = true)
                 }
             } else {
                 // No initial animation — set target values directly (skip non-animated)
@@ -258,7 +273,8 @@ class EaseView(context: Context) : ReactViewGroup(context) {
                 if (mask and MASK_ROTATE != 0) this.rotation = rotate
                 if (mask and MASK_ROTATE_X != 0) this.rotationX = rotateX
                 if (mask and MASK_ROTATE_Y != 0) this.rotationY = rotateY
-                if (mask and MASK_BORDER_RADIUS != 0) setBorderRadius(borderRadius)
+                if (mask and MASK_BORDER_RADIUS != 0) setAnimateBorderRadius(borderRadius)
+                if (mask and MASK_BACKGROUND_COLOR != 0) applyBackgroundColor(backgroundColor)
             }
         } else if (transitionType == "none") {
             // No transition — set values immediately, cancel running animations
@@ -271,7 +287,8 @@ class EaseView(context: Context) : ReactViewGroup(context) {
             if (mask and MASK_ROTATE != 0) this.rotation = rotate
             if (mask and MASK_ROTATE_X != 0) this.rotationX = rotateX
             if (mask and MASK_ROTATE_Y != 0) this.rotationY = rotateY
-            if (mask and MASK_BORDER_RADIUS != 0) setBorderRadius(borderRadius)
+            if (mask and MASK_BORDER_RADIUS != 0) setAnimateBorderRadius(borderRadius)
+            if (mask and MASK_BACKGROUND_COLOR != 0) applyBackgroundColor(backgroundColor)
             onTransitionEnd?.invoke(true)
         } else {
             // Subsequent updates: animate changed properties (skip non-animated)
@@ -316,8 +333,12 @@ class EaseView(context: Context) : ReactViewGroup(context) {
             }
 
             if (prevBorderRadius != null && mask and MASK_BORDER_RADIUS != 0 && prevBorderRadius != borderRadius) {
-                val from = getCurrentValue("borderRadius")
-                animateProperty("borderRadius", null, from, borderRadius)
+                val from = getCurrentValue("animateBorderRadius")
+                animateProperty("animateBorderRadius", null, from, borderRadius)
+            }
+
+            if (prevBackgroundColor != null && mask and MASK_BACKGROUND_COLOR != 0 && prevBackgroundColor != backgroundColor) {
+                animateBackgroundColor(getCurrentBackgroundColor(), backgroundColor)
             }
         }
 
@@ -330,6 +351,7 @@ class EaseView(context: Context) : ReactViewGroup(context) {
         prevRotateX = rotateX
         prevRotateY = rotateY
         prevBorderRadius = borderRadius
+        prevBackgroundColor = backgroundColor
     }
 
     private fun getCurrentValue(propertyName: String): Float = when (propertyName) {
@@ -341,8 +363,61 @@ class EaseView(context: Context) : ReactViewGroup(context) {
         "rotation" -> this.rotation
         "rotationX" -> this.rotationX
         "rotationY" -> this.rotationY
-        "borderRadius" -> getBorderRadius()
+        "animateBorderRadius" -> getAnimateBorderRadius()
         else -> 0f
+    }
+
+    private fun getCurrentBackgroundColor(): Int {
+        return currentBackgroundColor
+    }
+
+    private fun applyBackgroundColor(color: Int) {
+        currentBackgroundColor = color
+        setBackgroundColor(color)
+    }
+
+    private fun animateBackgroundColor(fromColor: Int, toColor: Int, loop: Boolean = false) {
+        runningAnimators["backgroundColor"]?.cancel()
+
+        val batchId = animationBatchId
+        pendingBatchAnimationCount++
+
+        val animator = ValueAnimator.ofArgb(fromColor, toColor).apply {
+            duration = transitionDuration.toLong()
+            interpolator = PathInterpolator(
+                transitionEasingBezier[0], transitionEasingBezier[1],
+                transitionEasingBezier[2], transitionEasingBezier[3]
+            )
+            if (loop && transitionLoop != "none") {
+                repeatCount = ValueAnimator.INFINITE
+                repeatMode = if (transitionLoop == "reverse") ValueAnimator.REVERSE else ValueAnimator.RESTART
+            }
+            addUpdateListener { animation ->
+                val color = animation.animatedValue as Int
+                this@EaseView.currentBackgroundColor = color
+                this@EaseView.setBackgroundColor(color)
+            }
+            addListener(object : AnimatorListenerAdapter() {
+                private var cancelled = false
+                override fun onAnimationStart(animation: Animator) {
+                    this@EaseView.onEaseAnimationStart()
+                }
+                override fun onAnimationCancel(animation: Animator) { cancelled = true }
+                override fun onAnimationEnd(animation: Animator) {
+                    this@EaseView.onEaseAnimationEnd()
+                    if (batchId == animationBatchId) {
+                        if (cancelled) anyInterrupted = true
+                        pendingBatchAnimationCount--
+                        if (pendingBatchAnimationCount <= 0) {
+                            onTransitionEnd?.invoke(!anyInterrupted)
+                        }
+                    }
+                }
+            })
+        }
+
+        runningAnimators["backgroundColor"] = animator
+        animator.start()
     }
 
     private fun animateProperty(
@@ -524,6 +599,7 @@ class EaseView(context: Context) : ReactViewGroup(context) {
         prevRotateX = null
         prevRotateY = null
         prevBorderRadius = null
+        prevBackgroundColor = null
 
         this.alpha = 1f
         this.translationX = 0f
@@ -533,7 +609,8 @@ class EaseView(context: Context) : ReactViewGroup(context) {
         this.rotation = 0f
         this.rotationX = 0f
         this.rotationY = 0f
-        setBorderRadius(0f)
+        setAnimateBorderRadius(0f)
+        applyBackgroundColor(Color.TRANSPARENT)
 
         isFirstMount = true
         transitionLoop = "none"

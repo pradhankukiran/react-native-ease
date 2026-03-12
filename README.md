@@ -164,6 +164,24 @@ Use `{ type: 'none' }` to apply values immediately without animation. Useful for
 
 When `borderRadius` is in `animate`, any `borderRadius` in `style` is automatically stripped to avoid conflicts.
 
+### Background Color
+
+`backgroundColor` can be animated using any React Native color value. Colors are converted to native ARGB integers via `processColor()`.
+
+```tsx
+<EaseView
+  animate={{ backgroundColor: isActive ? '#3B82F6' : '#E5E7EB' }}
+  transition={{ type: 'timing', duration: 300 }}
+  style={styles.card}
+>
+  <Text>Tap to change color</Text>
+</EaseView>
+```
+
+On Android, background color uses `ValueAnimator.ofArgb()` (timing only — spring is not supported for colors). On iOS, it uses `CAAnimation` on the `backgroundColor` layer key path and supports both timing and spring transitions.
+
+When `backgroundColor` is in `animate`, any `backgroundColor` in `style` is automatically stripped to avoid conflicts.
+
 ### Animatable Properties
 
 All properties are set in the `animate` prop as flat values (no transform array).
@@ -181,6 +199,7 @@ All properties are set in the `animate` prop as flat values (no transform array)
     rotateX: 0,       // X-axis rotation in degrees (3D)
     rotateY: 0,       // Y-axis rotation in degrees (3D)
     borderRadius: 0,  // pixels (hardware-accelerated, clips children)
+    backgroundColor: 'transparent', // any RN color value
   }}
 />
 ```
@@ -325,6 +344,7 @@ A `View` that animates property changes using native platform APIs.
 | `rotateX` | `number` | `0` | X-axis rotation in degrees (3D) |
 | `rotateY` | `number` | `0` | Y-axis rotation in degrees (3D) |
 | `borderRadius` | `number` | `0` | Border radius in pixels (hardware-accelerated, clips children) |
+| `backgroundColor` | `ColorValue` | `'transparent'` | Background color (any RN color value). Timing-only on Android, spring+timing on iOS. |
 
 Properties not specified in `animate` default to their identity values.
 

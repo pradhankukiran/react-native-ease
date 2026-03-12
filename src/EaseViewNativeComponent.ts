@@ -3,6 +3,7 @@ import {
   type CodegenTypes,
   type ViewProps,
   type HostComponent,
+  type ColorValue,
 } from 'react-native';
 
 export interface NativeProps extends ViewProps {
@@ -19,6 +20,7 @@ export interface NativeProps extends ViewProps {
   animateRotateX?: CodegenTypes.WithDefault<CodegenTypes.Float, 0.0>;
   animateRotateY?: CodegenTypes.WithDefault<CodegenTypes.Float, 0.0>;
   animateBorderRadius?: CodegenTypes.WithDefault<CodegenTypes.Float, 0.0>;
+  animateBackgroundColor?: ColorValue;
 
   // Initial values for enter animations
   initialAnimateOpacity?: CodegenTypes.WithDefault<CodegenTypes.Float, 1.0>;
@@ -33,6 +35,7 @@ export interface NativeProps extends ViewProps {
     CodegenTypes.Float,
     0.0
   >;
+  initialAnimateBackgroundColor?: ColorValue;
 
   // Transition config
   transitionType?: CodegenTypes.WithDefault<

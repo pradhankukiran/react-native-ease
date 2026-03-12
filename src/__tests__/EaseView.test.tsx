@@ -336,6 +336,71 @@ describe('EaseView', () => {
     });
   });
 
+  describe('animate backgroundColor', () => {
+    it('passes color value to native', () => {
+      render(<EaseView testID="ease" animate={{ backgroundColor: 'red' }} />);
+      const props = getNativeProps();
+      expect(props.animateBackgroundColor).toBe('red');
+    });
+
+    it('defaults animateBackgroundColor to transparent when not in animate', () => {
+      render(<EaseView testID="ease" />);
+      expect(getNativeProps().animateBackgroundColor).toBe('transparent');
+    });
+
+    it('sets bitmask for backgroundColor (1 << 9 = 512)', () => {
+      render(<EaseView testID="ease" animate={{ backgroundColor: 'blue' }} />);
+      expect(getNativeProps().animatedProperties).toBe(512);
+    });
+
+    it('strips style backgroundColor when animate.backgroundColor is set', () => {
+      const spy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      render(
+        <EaseView
+          testID="ease"
+          animate={{ backgroundColor: 'red' }}
+          style={{ backgroundColor: 'blue', borderRadius: 8 }}
+        />,
+      );
+      const props = getNativeProps();
+      expect(props.style).toEqual(expect.objectContaining({ borderRadius: 8 }));
+      expect(props.style.backgroundColor).toBeUndefined();
+      spy.mockRestore();
+    });
+
+    it('keeps style backgroundColor when not in animate', () => {
+      render(
+        <EaseView
+          testID="ease"
+          style={{ backgroundColor: 'blue', borderRadius: 8 }}
+        />,
+      );
+      const props = getNativeProps();
+      expect(props.style).toEqual(
+        expect.objectContaining({ backgroundColor: 'blue', borderRadius: 8 }),
+      );
+    });
+
+    it('passes initialAnimateBackgroundColor as ColorValue', () => {
+      render(
+        <EaseView
+          testID="ease"
+          initialAnimate={{ backgroundColor: 'green' }}
+          animate={{ backgroundColor: 'red' }}
+        />,
+      );
+      const props = getNativeProps();
+      expect(props.initialAnimateBackgroundColor).toBe('green');
+      expect(props.animateBackgroundColor).toBe('red');
+    });
+
+    it('falls back initialAnimateBackgroundColor to animate value when no initialAnimate', () => {
+      render(<EaseView testID="ease" animate={{ backgroundColor: 'red' }} />);
+      const props = getNativeProps();
+      expect(props.initialAnimateBackgroundColor).toBe('red');
+    });
+  });
+
   describe('style conflict handling', () => {
     it('warns when opacity is in both style and animate', () => {
       const spy = jest.spyOn(console, 'warn').mockImplementation(() => {});
