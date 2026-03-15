@@ -45,46 +45,60 @@ function ButtonDemo() {
 }
 
 function BannerDemo() {
+  const [playing, setPlaying] = useState(false);
   return (
     <Section title="Scrolling Banner">
       <View style={styles.bannerContainer}>
-        <EaseView
-          initialAnimate={{ translateX: 0 }}
-          animate={{ translateX: -BANNER_WIDTH }}
-          transition={{
-            type: 'timing',
-            duration: 5000,
-            easing: 'linear',
-            loop: 'repeat',
-          }}
-          style={styles.bannerTrack}
-          useHardwareLayer={false}
-        >
-          <View style={styles.bannerSlide}>
-            <Text style={styles.bannerText}>react-native-ease</Text>
-          </View>
-          <View style={styles.bannerSlide}>
-            <Text style={styles.bannerText}>react-native-ease</Text>
-          </View>
-        </EaseView>
+        {playing && (
+          <EaseView
+            initialAnimate={{ translateX: 0 }}
+            animate={{ translateX: -BANNER_WIDTH }}
+            transition={{
+              type: 'timing',
+              duration: 5000,
+              easing: 'linear',
+              loop: 'repeat',
+            }}
+            style={styles.bannerTrack}
+            useHardwareLayer={false}
+          >
+            <View style={styles.bannerSlide}>
+              <Text style={styles.bannerText}>react-native-ease</Text>
+            </View>
+            <View style={styles.bannerSlide}>
+              <Text style={styles.bannerText}>react-native-ease</Text>
+            </View>
+          </EaseView>
+        )}
       </View>
+      <Button
+        label={playing ? 'Stop' : 'Start'}
+        onPress={() => setPlaying((p) => !p)}
+      />
     </Section>
   );
 }
 
 function PulseDemo() {
+  const [playing, setPlaying] = useState(false);
   return (
     <Section title="Pulse (Reverse Loop)">
-      <EaseView
-        initialAnimate={{ scale: 1, opacity: 0.5 }}
-        animate={{ scale: 1.3, opacity: 1 }}
-        transition={{
-          type: 'timing',
-          duration: 800,
-          easing: 'easeInOut',
-          loop: 'reverse',
-        }}
-        style={styles.pulse}
+      {playing && (
+        <EaseView
+          initialAnimate={{ scale: 1, opacity: 0.5 }}
+          animate={{ scale: 1.3, opacity: 1 }}
+          transition={{
+            type: 'timing',
+            duration: 800,
+            easing: 'easeInOut',
+            loop: 'reverse',
+          }}
+          style={styles.pulse}
+        />
+      )}
+      <Button
+        label={playing ? 'Stop' : 'Start'}
+        onPress={() => setPlaying((p) => !p)}
       />
     </Section>
   );
