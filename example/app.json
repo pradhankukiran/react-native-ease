@@ -1,4 +1,19 @@
 {
   "name": "EaseExample",
-  "displayName": "EaseExample"
+  "displayName": "EaseExample",
+  "expo": {
+    "name": "EaseExample",
+    "slug": "ease-example",
+    "version": "1.0.0",
+    "web": {
+      "bundler": "metro",
+      "output": "single",
+      "entry": "./index.js"
+    },
+    "platforms": [
+      "ios",
+      "android",
+      "web"
+    ]
+  }
 }
