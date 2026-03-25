@@ -3,6 +3,7 @@ import { View, type ViewStyle, type StyleProp } from 'react-native';
 import type {
   AnimateProps,
   CubicBezier,
+  SingleTransition,
   Transition,
   TransitionEndEvent,
   TransformOrigin,
@@ -81,7 +82,78 @@ function buildTransform(vals: ReturnType<typeof resolveAnimateValues>): string {
   return parts.length > 0 ? parts.join(' ') : 'none';
 }
 
-function resolveEasing(transition: Transition | undefined): string {
+/** Returns true if the transition is a SingleTransition (has a `type` field). */
+function isSingleTransition(t: Transition): t is SingleTransition {
+  return 'type' in t;
+}
+
+/** Resolve a single config into CSS-ready duration/easing. */
+function resolveConfigForCss(config: SingleTransition | undefined): {
+  duration: number;
+  easing: string;
+  type: string;
+} {
+  if (!config || config.type === 'none') {
+    return { duration: 0, easing: 'linear', type: config?.type ?? 'timing' };
+  }
+  return {
+    duration: resolveDuration(config),
+    easing: resolveEasing(config),
+    type: config.type,
+  };
+}
+
+/** CSS property names for each category. */
+const CSS_PROP_MAP = {
+  opacity: 'opacity',
+  transform: 'transform',
+  borderRadius: 'border-radius',
+  backgroundColor: 'background-color',
+} as const;
+
+type CategoryKey = keyof typeof CSS_PROP_MAP;
+
+/** Resolve transition prop into per-category CSS configs. */
+function resolvePerCategoryConfigs(
+  transition: Transition | undefined,
+): Record<CategoryKey, { duration: number; easing: string; type: string }> {
+  if (!transition) {
+    const def = resolveConfigForCss(undefined);
+    return {
+      opacity: def,
+      transform: def,
+      borderRadius: def,
+      backgroundColor: def,
+    };
+  }
+  if (isSingleTransition(transition)) {
+    const def = resolveConfigForCss(transition);
+    return {
+      opacity: def,
+      transform: def,
+      borderRadius: def,
+      backgroundColor: def,
+    };
+  }
+  // TransitionMap
+  const defaultConfig = resolveConfigForCss(transition.default);
+  return {
+    opacity: transition.opacity
+      ? resolveConfigForCss(transition.opacity)
+      : defaultConfig,
+    transform: transition.transform
+      ? resolveConfigForCss(transition.transform)
+      : defaultConfig,
+    borderRadius: transition.borderRadius
+      ? resolveConfigForCss(transition.borderRadius)
+      : defaultConfig,
+    backgroundColor: transition.backgroundColor
+      ? resolveConfigForCss(transition.backgroundColor)
+      : defaultConfig,
+  };
+}
+
+function resolveEasing(transition: SingleTransition | undefined): string {
   if (!transition || transition.type !== 'timing') {
     return 'cubic-bezier(0.42, 0, 0.58, 1)';
   }
@@ -92,7 +164,7 @@ function resolveEasing(transition: Transition | undefined): string {
   return `cubic-bezier(${bezier[0]}, ${bezier[1]}, ${bezier[2]}, ${bezier[3]})`;
 }
 
-function resolveDuration(transition: Transition | undefined): number {
+function resolveDuration(transition: SingleTransition | undefined): number {
   if (!transition) return 300;
   if (transition.type === 'timing') return transition.duration ?? 300;
   if (transition.type === 'none') return 0;
@@ -101,14 +173,6 @@ function resolveDuration(transition: Transition | undefined): number {
   const tau = (2 * mass) / damping;
   return Math.round(tau * 4 * 1000);
 }
-
-/** CSS transition properties that we animate. */
-const TRANSITION_PROPS = [
-  'opacity',
-  'transform',
-  'border-radius',
-  'background-color',
-];
 
 /** Counter for unique keyframe names. */
 let keyframeCounter = 0;
@@ -146,21 +210,42 @@ export function EaseView({
   const displayValues =
     !mounted && hasInitial ? resolveAnimateValues(initialAnimate) : resolved;
 
-  const duration = resolveDuration(transition);
-  const easing = resolveEasing(transition);
+  const categoryConfigs = resolvePerCategoryConfigs(transition);
+
+  // For loop mode, use the default/single transition config
+  const singleTransition =
+    transition && isSingleTransition(transition)
+      ? transition
+      : transition && !isSingleTransition(transition)
+      ? transition.default
+      : undefined;
+  const loopMode =
+    singleTransition?.type === 'timing' ? singleTransition.loop : undefined;
+  const loopDuration = resolveDuration(singleTransition);
+  const loopEasing = resolveEasing(singleTransition);
 
   const originX = ((transformOrigin?.x ?? 0.5) * 100).toFixed(1);
   const originY = ((transformOrigin?.y ?? 0.5) * 100).toFixed(1);
 
-  const transitionType = transition?.type ?? 'timing';
-  const loopMode = transition?.type === 'timing' ? transition.loop : undefined;
-
   const transitionCss =
-    transitionType === 'none' || (!mounted && hasInitial)
+    !mounted && hasInitial
       ? 'none'
-      : TRANSITION_PROPS.map((prop) => `${prop} ${duration}ms ${easing}`).join(
-          ', ',
-        );
+      : (Object.keys(CSS_PROP_MAP) as CategoryKey[])
+          .filter((key) => {
+            const cfg = categoryConfigs[key];
+            return cfg.type !== 'none' && cfg.duration > 0;
+          })
+          .map((key) => {
+            const cfg = categoryConfigs[key];
+            const springEasing =
+              cfg.type === 'spring'
+                ? 'cubic-bezier(0.25, 0.46, 0.45, 0.94)'
+                : null;
+            return `${CSS_PROP_MAP[key]} ${cfg.duration}ms ${
+              springEasing ?? cfg.easing
+            }`;
+          })
+          .join(', ') || 'none';
 
   // Apply CSS transition/animation properties imperatively (not in RN style spec).
   useEffect(() => {
@@ -168,14 +253,7 @@ export function EaseView({
     if (!el) return;
 
     if (!loopMode) {
-      const springTransition =
-        transitionType === 'spring'
-          ? TRANSITION_PROPS.map(
-              (prop) =>
-                `${prop} ${duration}ms cubic-bezier(0.25, 0.46, 0.45, 0.94)`,
-            ).join(', ')
-          : null;
-      el.style.transition = springTransition ?? transitionCss;
+      el.style.transition = transitionCss;
     }
     el.style.transformOrigin = `${originX}% ${originY}%`;
   });
@@ -257,27 +335,37 @@ export function EaseView({
 
     const direction = loopMode === 'reverse' ? 'alternate' : 'normal';
     el.style.transition = 'none';
-    el.style.animation = `${name} ${duration}ms ${easing} infinite ${direction}`;
+    el.style.animation = `${name} ${loopDuration}ms ${loopEasing} infinite ${direction}`;
 
     return () => {
       styleEl.remove();
       el.style.animation = '';
       animationNameRef.current = null;
     };
-  }, [loopMode, animate, initialAnimate, duration, easing, getElement]);
+  }, [loopMode, animate, initialAnimate, loopDuration, loopEasing, getElement]);
 
   // Build animated style using RN transform array format.
   // react-native-web converts these to CSS transform strings.
   const animatedStyle: ViewStyle = {
     opacity: displayValues.opacity,
     transform: [
-      { translateX: displayValues.translateX },
-      { translateY: displayValues.translateY },
-      { scaleX: displayValues.scaleX },
-      { scaleY: displayValues.scaleY },
-      { rotate: `${displayValues.rotate}deg` },
-      { rotateX: `${displayValues.rotateX}deg` },
-      { rotateY: `${displayValues.rotateY}deg` },
+      ...(displayValues.translateX !== 0
+        ? [{ translateX: displayValues.translateX }]
+        : []),
+      ...(displayValues.translateY !== 0
+        ? [{ translateY: displayValues.translateY }]
+        : []),
+      ...(displayValues.scaleX !== 1 ? [{ scaleX: displayValues.scaleX }] : []),
+      ...(displayValues.scaleY !== 1 ? [{ scaleY: displayValues.scaleY }] : []),
+      ...(displayValues.rotate !== 0
+        ? [{ rotate: `${displayValues.rotate}deg` }]
+        : []),
+      ...(displayValues.rotateX !== 0
+        ? [{ rotateX: `${displayValues.rotateX}deg` }]
+        : []),
+      ...(displayValues.rotateY !== 0
+        ? [{ rotateY: `${displayValues.rotateY}deg` }]
+        : []),
     ],
     ...(displayValues.borderRadius > 0
       ? { borderRadius: displayValues.borderRadius }
